@@ -2,8 +2,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <errno.h>
 
 #define VERSION "v0.1"
+
+char CURRENT_DIR[256] = "/";
 
 char* response_msg(int return_code, char* text_msg)
 {
@@ -38,11 +42,22 @@ char* version_msg()
 
 char* parse_command(char* command)
 {
+    // Remove "\n" from command
+    command = strtok(command, "\n");
+    // Split string on " "
     char* token = strsep(&command, " ");
+    // Print result
+    printf("Token: %s\nArgument: %s\n", token, command);
+
     if(!strncmp(token, "USER", 4)) {
         return response_msg(331, "Whatever user ;)");
     } else if(!strncmp(token, "PASS", 4)) {
         return response_msg(231, "Whatever pass ;)");
+    } else if(!strncmp(token, "PWD", 3) || !strncmp(token, "XPWD", 4)) {
+        return response_msg(257, CURRENT_DIR);
+    } else if(!strncmp(token, "CWD", 3)) {
+        strncpy(CURRENT_DIR, command, 256);
+        return response_msg(250, "OK");
     } else {
         return response_msg(500, "Command not found");
     }
