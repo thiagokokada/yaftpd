@@ -19,7 +19,7 @@
 
 int main (int argc, char **argv) {
     int listenfd, connfd;
-    struct sockaddr_in servaddr;
+    struct sockaddr_in servaddr, servconn;
     pid_t childpid;
     char recvline[MAXLINE + 1];
     ssize_t  n;
@@ -57,8 +57,14 @@ int main (int argc, char **argv) {
             exit(5);
         }
 
+        socklen_t servconn_size = sizeof(servconn);
+        if (getsockname(connfd, (struct sockaddr_in *) &servconn, &servconn_size) == -1) {
+            perror("getsockname()");
+            exit(6);
+        }
+
         if ((childpid = fork()) == 0) { // Child proccess
-            printf("Succesful connection. New child PID: %d\n", getpid());
+            printf("Succesful connection at %s. New child PID: %d\n", inet_ntoa(servconn.sin_addr), getpid());
             close(listenfd);
 
             /* When the user connects show info message about server version */ 
@@ -70,7 +76,7 @@ int main (int argc, char **argv) {
                 printf("PID %d send: ", getpid());
                 if ((fputs(recvline,stdout)) == EOF) {
                     perror("fputs()");
-                    exit(6);
+                    exit(7);
                 }
                 char* return_msg = parse_command(recvline);
                 write(connfd, return_msg, strlen(return_msg));
