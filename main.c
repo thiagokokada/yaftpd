@@ -13,13 +13,12 @@
 
 #include "ftp.c"
 
-#define LISTENQ 1
 #define MAXDATASIZE 100
 #define MAXLINE 4096
 
 int main (int argc, char **argv) {
     int listenfd, connfd;
-    struct sockaddr_in servaddr, servconn;
+    struct sockaddr_in servconn;
     pid_t childpid;
     char recvline[MAXLINE + 1];
     ssize_t  n;
@@ -27,32 +26,12 @@ int main (int argc, char **argv) {
     if (argc != 2) {
         fprintf(stderr,"usage: %s PORT\n",argv[0]);
         fprintf(stderr,"Run FTP server in port PORT\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
-    if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-        perror("socket");
-        exit(2);
-    }
-
-    int yes = 1;
-    if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) { 
-        perror("setsockopt"); 
-        exit(1); 
-    }  
-
-    bzero(&servaddr, sizeof(servaddr));
-    servaddr.sin_family      = AF_INET;
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port        = htons(atoi(argv[1]));
-    if (bind(listenfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) == -1) {
-        perror("bind");
-        exit(3);
-    }
-
-    if (listen(listenfd, LISTENQ) == -1) {
-        perror("listen");
-        exit(4);
+    if ((listenfd = create_listener(INADDR_ANY, atoi(argv[1]), 1)) == -1) {
+        perror("create_listener");
+        exit(EXIT_FAILURE);
     }
 
     printf("YAFTPd is running in port %s\n",argv[1]);
@@ -60,13 +39,13 @@ int main (int argc, char **argv) {
     for (;;) {
         if ((connfd = accept(listenfd, (struct sockaddr *) NULL, NULL)) == -1 ) {
             perror("accept");
-            exit(5);
+            exit(EXIT_FAILURE);
         }
 
         socklen_t servconn_size = sizeof(servconn);
         if (getsockname(connfd, (struct sockaddr_in *) &servconn, &servconn_size) == -1) {
             perror("getsockname");
-            exit(6);
+            exit(EXIT_FAILURE);
         }
 
         if ((childpid = fork()) == 0) { // Child proccess
@@ -82,14 +61,14 @@ int main (int argc, char **argv) {
                 printf("PID %d send: ", getpid());
                 if ((fputs(recvline,stdout)) == EOF) {
                     perror("fputs");
-                    exit(7);
+                    exit(EXIT_FAILURE);
                 }
                 char* return_msg = parse_command(recvline);
                 write(connfd, return_msg, strlen(return_msg));
             }
 
             printf("Finished connection with child PID: %d\n", getpid());
-            exit(0);
+            exit(EXIT_SUCCESS);
         } else { // Parent proccess
             close(connfd);
         }
