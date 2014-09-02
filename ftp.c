@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 #include <errno.h>
 #include <arpa/inet.h>
@@ -10,6 +11,7 @@
 #define LISTENQ 1
 
 char CURRENT_DIR[256] = "/";
+int INIT_SEED = 0;
 
 char* response_msg(int return_code, char* text_msg)
 {
@@ -94,4 +96,32 @@ int create_listener(uint32_t ip, uint16_t port, int reuse_addr) {
     }
 
     return listenfd;
+}
+
+int random_number(int min, int max) {
+    /* Generate a random number in [min, max] range, where min >= 0 and
+    max < RAND_MAX.
+
+    Returns a number between 0 and max, or -1 in case of error.
+    */
+    
+    // Check if input is valid
+    if(min < 0 || max >= RAND_MAX) {
+        return -1;
+    }
+
+    // Initialize srand if it's not initialized yet
+    if(!INIT_SEED) {
+        INIT_SEED = 1;
+        srand(time(NULL));
+    }
+
+    // Generate random number, discard it if it's not in inputted range
+    int divisor = RAND_MAX/(max+1);
+    int retval;
+    do { 
+        retval = rand() / divisor;
+    } while (retval < min || retval > max);
+
+    return retval;
 }
