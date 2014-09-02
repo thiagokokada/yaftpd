@@ -1,4 +1,5 @@
 #define _GNU_SOURCE
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
@@ -11,7 +12,7 @@
 #include <time.h>
 #include <unistd.h>
 
-#include "ftp.c"
+#include "ftp.h"
 
 #define MAXDATASIZE 100
 #define MAXLINE 4096
@@ -53,7 +54,7 @@ int main (int argc, char **argv) {
             close(listenfd);
 
             /* When the user connects show info message about server version */ 
-            char* msg = version_msg();
+            char* msg = version_info();
             write(connfd, msg, strlen(msg));
 
             while ((n=read(connfd, recvline, MAXLINE)) > 0) {

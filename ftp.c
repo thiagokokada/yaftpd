@@ -1,14 +1,4 @@
-#define _GNU_SOURCE
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <unistd.h>
-#include <errno.h>
-#include <arpa/inet.h>
-
-#define VERSION "v0.1"
-#define LISTENQ 1
+#include "ftp.h"
 
 char CURRENT_DIR[256] = "/";
 int INIT_SEED = 0;
@@ -37,11 +27,9 @@ char* response_msg(int return_code, char* text_msg)
     return msg;
 }
 
-char* version_msg()
+char* version_info()
 {
-    char msg[40] = "YAFTPd - Yet Another FTP daemon ";
-    strncat(msg, VERSION, 5);
-    return response_msg(200, msg);
+    return response_msg(200, VERSION_INFO);
 }
 
 char* parse_command(char* command)
@@ -63,7 +51,9 @@ char* parse_command(char* command)
         strncpy(CURRENT_DIR, command, 256);
         return response_msg(250, "OK");
     } else if(!strncmp(token, "PASV", 4)){
-        
+        int* port = get_random_port_number();
+        char* ip;
+        asprintf(&ip, "Entering Passive Mode (127,0,0,1,%d,%d)", port[0], port[1]);
     } else {
         return response_msg(500, "Command not found");
     }
@@ -124,4 +114,10 @@ int random_number(int min, int max) {
     } while (retval < min || retval > max);
 
     return retval;
+}
+
+int* get_random_port_number() {
+    int port = random_number(1024, 65535);
+    int result[2] = {port / 256, port % 256};
+    return result;
 }
