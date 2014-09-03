@@ -2,6 +2,7 @@
 
 char CURRENT_DIR[256] = "/";
 int INIT_SEED = 0;
+int PASSIVE_CONN_FD = -1;
 struct sockaddr_in CURRENT_CONN;
 socklen_t CURRENT_CONN_SIZE;
 
@@ -32,16 +33,10 @@ char* parse_command(char* command)
         char* msg;
 
         if ((childpid = fork()) == 0) {
-            if ((listenfd = create_listener(INADDR_ANY, port, 0)) == -1) {
-                perror("create_listener");
+            if((PASSIVE_CONN_FD = create_passive_conn(INADDR_ANY, port)) == -1) {
+                perror("create_passive_conn");
                 exit(EXIT_FAILURE);
             }
-            if ((connfd = accept(listenfd, (struct sockaddr *) NULL, NULL)) == -1 ) {
-                perror("accept");
-                exit(EXIT_FAILURE);
-            }
-            close(listenfd);
-            printf("Successful connect in passive mode with PID: %d\n", getpid());
         }
 
         asprintf(&msg, "Entering Passive Mode (%s,%s,%s,%s,%d,%d)",
@@ -50,6 +45,13 @@ char* parse_command(char* command)
                  port / 256, port % 256);
         
         return response_msg(227, msg);
+    } else if (!strncmp(token, "ABOR", 4)) {
+        if (PASSIVE_CONN_FD == -1) {
+            return response_msg(225, "No transfer to abort");
+        } else {
+            close(PASSIVE_CONN_FD);
+            return response_msg(226, "Aborted connection");
+        }
     } else if (!strncmp(token, "SYST", 4)) {
         return response_msg(215, "UNIX Type: L8");
     } else if(!strncmp(token, "QUIT", 4)) {
@@ -144,4 +146,19 @@ int random_number(int min, int max) {
     } while (retval < min || retval > max);
 
     return retval;
+}
+
+int create_passive_conn(uint32_t ip, uint16_t port) {
+    int listenfd, connfd;
+
+    if ((listenfd = create_listener(ip, port, 1)) == -1) {
+        return -1;
+    }
+    if ((connfd = accept(listenfd, (struct sockaddr *) NULL, NULL)) == -1 ) {
+        return -1;
+    }
+    close(listenfd);
+    printf("Successful connect in passive mode with PID: %d\n", getpid());
+
+    return connfd;
 }

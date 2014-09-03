@@ -21,6 +21,7 @@
 #define LISTENQ 1
 
 extern int INIT_SEED;
+extern int PASSIVE_CONN_FD;
 extern char CURRENT_DIR[256];
 extern struct sockaddr_in CURRENT_CONN;
 extern socklen_t CURRENT_CONN_SIZE;
@@ -30,5 +31,6 @@ int create_listener(uint32_t ip,uint16_t port,int reuse_addr);
 char *parse_command(char *command);
 char *version_info();
 char *response_msg(int return_code,char *text_msg);
+int create_passive_conn(uint32_t ip, uint16_t port);
 
 #endif
