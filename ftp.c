@@ -37,7 +37,10 @@ char* parse_command(char* command)
         } 
         asprintf(&msg, "Entering Passive Mode (127,0,0,1,%d,%d)", port / 256, port % 256);
         return response_msg(227, msg);
-    } else {
+    } else if(!strncmp(token, "QUIT", 4)) {
+        return response_msg(221, "Bye bye T-T...");
+    }
+    else {
         return response_msg(500, "Command not found");
     }
     return NULL;
