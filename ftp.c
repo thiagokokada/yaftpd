@@ -33,18 +33,22 @@ char* parse_command(char* command)
 
         if ((childpid = fork()) == 0) {
             if ((listenfd = create_listener(INADDR_ANY, port, 0)) == -1) {
-                return NULL;
+                perror("create_listener");
+                exit(EXIT_FAILURE);
             }
             if ((connfd = accept(listenfd, (struct sockaddr *) NULL, NULL)) == -1 ) {
-                return NULL;
+                perror("accept");
+                exit(EXIT_FAILURE);
             }
             close(listenfd);
             printf("Successful connect in passive mode with PID: %d\n", getpid());
         }
+
         asprintf(&msg, "Entering Passive Mode (%s,%s,%s,%s,%d,%d)",
                  strsep(&current_ip, "."), strsep(&current_ip, "."),
                  strsep(&current_ip, "."), strsep(&current_ip, "."),
                  port / 256, port % 256);
+        
         return response_msg(227, msg);
     } else if (!strncmp(token, "SYST", 4)) {
         return response_msg(215, "UNIX Type: L8");
