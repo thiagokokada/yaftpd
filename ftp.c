@@ -28,6 +28,8 @@ char* parse_command(char* command)
         char* msg;
         asprintf(&msg, "Entering Passive Mode (127,0,0,1,%d,%d)", port / 256, port % 256);
         return response_msg(227, msg);
+    } else if (!strncmp(token, "SYST", 4)) {
+        return response_msg(215, "UNIX Type: L8");
     } else if(!strncmp(token, "QUIT", 4)) {
         return response_msg(221, "Bye bye T-T...");
     }
@@ -63,7 +65,7 @@ char* response_msg(int return_code, char* text_msg)
 
 char* version_info()
 {
-    return response_msg(200, VERSION_INFO);
+    return response_msg(220, VERSION_INFO);
 }
 
 int create_listener(uint32_t ip, uint16_t port, int reuse_addr) {
