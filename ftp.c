@@ -19,12 +19,24 @@ char* parse_command(char* command)
     } else if(!strncmp(token, "PASS", 4)) {
         return response_msg(231, "Whatever pass ;)");
     } else if(!strncmp(token, "PWD", 3) || !strncmp(token, "XPWD", 4)) {
-        return response_msg(257, CURRENT_DIR);
+        char* msg;
+        asprintf(&msg, "\"%s\" is the current working directory", CURRENT_DIR);
+        return response_msg(257, msg);
     } else if(!strncmp(token, "CWD", 3)) {
         strncpy(CURRENT_DIR, command, 256);
         return response_msg(250, "OK");
     } else if(!strncmp(token, "PASV", 4)){
-
+        int listenfd;
+        int port = random_number(1024, 65535);
+        char* msg;
+        if ((listenfd = create_listener(INADDR_ANY, port, 0)) == -1) {
+            return NULL;
+        }
+        if (data_conn(listenfd) == -1) {
+            return NULL;
+        } 
+        asprintf(&msg, "Entering Passive Mode (127,0,0,1,%d,%d)", port / 256, port % 256);
+        return response_msg(227, msg);
     } else {
         return response_msg(500, "Command not found");
     }
@@ -71,13 +83,7 @@ int controller_conn(int listenfd)
         return -1;
     }
 
-    CURRENT_CONN_SIZE = sizeof(CURRENT_CONN);
-    if (getsockname(connfd, (struct sockaddr_in *) &CURRENT_CONN, &CURRENT_CONN_SIZE) == -1) {
-        return -1;
-    }
-
     if ((childpid = fork()) == 0) { // Child proccess
-        printf("Succesful connection at %s. New child PID: %d\n", inet_ntoa(CURRENT_CONN.sin_addr), getpid());
         close(listenfd);
 
         /* When the user connects show info message about server version */ 
@@ -90,14 +96,40 @@ int controller_conn(int listenfd)
             if ((fputs(recvline,stdout)) == EOF) {
                 return -1;
             }
-            char* return_msg = parse_command(recvline);
+            char* return_msg;
+            if((return_msg = parse_command(recvline)) == NULL) {
+                return -1;
+            }
             write(connfd, return_msg, strlen(return_msg));
         }
 
         printf("Finished connection with child PID: %d\n", getpid());
-    } else { // Parent proccess
-        close(connfd);
     }
+
+    close(connfd);
+    return 0;
+}
+
+int data_conn(int listenfd)
+{
+    int connfd;
+    pid_t childpid;
+    char recvline[MAXLINE + 1];
+    ssize_t  n;
+
+    // Needs to fork before trying to connect, since we would block the
+    // parent proccess otherwise. This probably may allow a DoS attack,
+    // by issuing multiple calls to PASV, but since this is an programming
+    // exercise it shouldn't be that bad.
+    if ((childpid = fork()) == 0) {
+        if ((connfd = accept(listenfd, (struct sockaddr *) NULL, NULL)) == -1) {
+            return -1;
+        }
+        printf("Succesful connection in passive mode with PID: %d\n", getpid());
+        close(listenfd);
+    }
+
+    close(connfd);
     return 0;
 }
 

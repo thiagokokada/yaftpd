@@ -30,6 +30,7 @@ char *parse_command(char *command);
 char *response_msg(int return_code,char *text_msg);
 char *version_info();
 int controller_conn(int listenfd);
+int data_conn(int listenfd);
 int create_listener(uint32_t ip,uint16_t port,int reuse_addr);
 int random_number(int min,int max);
 
