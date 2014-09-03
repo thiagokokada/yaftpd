@@ -18,6 +18,8 @@
 
 extern int INIT_SEED;
 extern char CURRENT_DIR[256];
+extern struct sockaddr_in CURRENT_CONN;
+extern socklen_t CURRENT_CONN_SIZE;
 
 int random_number(int min,int max);
 int create_listener(uint32_t ip,uint16_t port,int reuse_addr);

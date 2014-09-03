@@ -2,6 +2,8 @@
 
 char CURRENT_DIR[256] = "/";
 int INIT_SEED = 0;
+struct sockaddr_in CURRENT_CONN;
+socklen_t CURRENT_CONN_SIZE;
 
 char* parse_command(char* command)
 {
@@ -25,8 +27,12 @@ char* parse_command(char* command)
         return response_msg(250, "OK");
     } else if(!strncmp(token, "PASV", 4)){
         int port = random_number(1024, 65535);
+        char* current_ip = inet_ntoa(CURRENT_CONN.sin_addr);
         char* msg;
-        asprintf(&msg, "Entering Passive Mode (127,0,0,1,%d,%d)", port / 256, port % 256);
+        asprintf(&msg, "Entering Passive Mode (%s,%s,%s,%s,%d,%d)",
+                 strsep(&current_ip, "."), strsep(&current_ip, "."),
+                 strsep(&current_ip, "."), strsep(&current_ip, "."),
+                 port / 256, port % 256);
         return response_msg(227, msg);
     } else if (!strncmp(token, "SYST", 4)) {
         return response_msg(215, "UNIX Type: L8");
@@ -76,7 +82,9 @@ int create_listener(uint32_t ip, uint16_t port, int reuse_addr) {
         return -1;
     }
 
-    if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &reuse_addr, sizeof(reuse_addr)) == -1) { 
+    if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &reuse_addr,
+        sizeof(reuse_addr)) == -1)
+    { 
         return -1;
     }
 
