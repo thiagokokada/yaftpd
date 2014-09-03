@@ -11,7 +11,11 @@
 #include <time.h>
 #include <unistd.h>
 #include <errno.h>
-#include <arpa/inet.h>
+#include <netdb.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>        
 
 #define VERSION_INFO "YAFTPd - Yet Another FTP daemon v0.1"
 #define LISTENQ 1

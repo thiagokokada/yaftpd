@@ -26,9 +26,21 @@ char* parse_command(char* command)
         strncpy(CURRENT_DIR, command, 256);
         return response_msg(250, "OK");
     } else if(!strncmp(token, "PASV", 4)){
+        int childpid, listenfd, connfd;
         int port = random_number(1024, 65535);
         char* current_ip = inet_ntoa(CURRENT_CONN.sin_addr);
         char* msg;
+
+        if ((childpid = fork()) == 0) {
+            if ((listenfd = create_listener(INADDR_ANY, port, 0)) == -1) {
+                return NULL;
+            }
+            if ((connfd = accept(listenfd, (struct sockaddr *) NULL, NULL)) == -1 ) {
+                return NULL;
+            }
+            close(listenfd);
+            printf("Successful connect in passive mode with PID: %d\n", getpid());
+        }
         asprintf(&msg, "Entering Passive Mode (%s,%s,%s,%s,%d,%d)",
                  strsep(&current_ip, "."), strsep(&current_ip, "."),
                  strsep(&current_ip, "."), strsep(&current_ip, "."),
@@ -82,9 +94,7 @@ int create_listener(uint32_t ip, uint16_t port, int reuse_addr) {
         return -1;
     }
 
-    if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &reuse_addr,
-        sizeof(reuse_addr)) == -1)
-    { 
+    if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &reuse_addr, sizeof(reuse_addr)) == -1) { 
         return -1;
     }
 
