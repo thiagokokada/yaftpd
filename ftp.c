@@ -2,7 +2,6 @@
 
 char CURRENT_DIR[256] = "/";
 int INIT_SEED = 0;
-int NUM_CONN = 0;
 socklen_t CURRENT_CONN_SIZE;
 struct sockaddr_in CURRENT_CONN;
 
@@ -118,18 +117,12 @@ int data_conn(int listenfd)
     char recvline[MAXLINE + 1];
     ssize_t  n;
 
-    /* Limit the number of multiple connections an user can do simultaneously.
-    This should protect the server from a possible DoS attack by issuing
-    multiples PASV commands. */
-    if (NUM_CONN < MAXCONN) {
-        NUM_CONN++;
-    } else {
-        return -1;
-    }
-
+    // Needs to fork before trying to connect, since we would block the
+    // parent proccess otherwise. This probably may allow a DoS attack,
+    // by issuing multiple calls to PASV, but since this is an programming
+    // exercise it shouldn't be that bad.
     if ((childpid = fork()) == 0) {
         if ((connfd = accept(listenfd, (struct sockaddr *) NULL, NULL)) == -1) {
-            NUM_CONN --;
             return -1;
         }
         printf("Succesful connection in passive mode with PID: %d\n", getpid());
@@ -137,7 +130,6 @@ int data_conn(int listenfd)
     }
 
     close(connfd);
-    NUM_CONN--;
     return 0;
 }
 

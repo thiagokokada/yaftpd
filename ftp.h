@@ -17,14 +17,12 @@
 #include <netinet/in.h>
 
 #define LISTENQ 1
-#define MAXCONN 5
 #define MAXDATASIZE 100
 #define MAXLINE 4096
 #define VERSION_INFO "YAFTPd - Yet Another FTP daemon v0.1"
 
 extern char CURRENT_DIR[256];
 extern int INIT_SEED;
-extern int NUM_CONN;
 extern socklen_t CURRENT_CONN_SIZE;
 extern struct sockaddr_in CURRENT_CONN;
 
