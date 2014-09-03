@@ -59,12 +59,13 @@ int main (int argc, char **argv) {
 
             while ((n=read(connfd, recvline, MAXLINE)) > 0) {
                 recvline[n]=0;
-                printf("PID %d send: ", getpid());
+                printf("PID %d SEND: ", getpid());
                 if ((fputs(recvline,stdout)) == EOF) {
                     perror("fputs");
                     exit(EXIT_FAILURE);
                 }
                 char* return_msg = parse_command(recvline);
+                printf("SERVER RESPONSE: %s", return_msg);
                 write(connfd, return_msg, strlen(return_msg));
             }
 
