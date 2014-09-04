@@ -18,7 +18,7 @@
 #define MAXLINE 4096
 
 int main (int argc, char **argv) {
-    int listenfd, connfd;
+    int listenfd;
     pid_t childpid;
     char recvline[MAXLINE + 1];
     ssize_t  n;
@@ -37,13 +37,13 @@ int main (int argc, char **argv) {
     printf("YAFTPd is running in port %s\n",argv[1]);
 
     for (;;) {
-        if ((connfd = accept(listenfd, (struct sockaddr *) NULL, NULL)) == -1 ) {
+        if ((CONN_FD = accept(listenfd, (struct sockaddr *) NULL, NULL)) == -1 ) {
             perror("accept");
             exit(EXIT_FAILURE);
         }
 
         socklen_t CURRENT_CONN_SIZE = sizeof(CURRENT_CONN);
-        if (getsockname(connfd, (struct sockaddr_in *) &CURRENT_CONN, &CURRENT_CONN_SIZE) == -1) {
+        if (getsockname(CONN_FD, (struct sockaddr_in *) &CURRENT_CONN, &CURRENT_CONN_SIZE) == -1) {
             perror("getsockname");
             exit(EXIT_FAILURE);
         }
@@ -54,9 +54,9 @@ int main (int argc, char **argv) {
 
             /* When the user connects show info message about server version */ 
             char* msg = version_info();
-            write(connfd, msg, strlen(msg));
+            write(CONN_FD, msg, strlen(msg));
 
-            while ((n=read(connfd, recvline, MAXLINE)) > 0) {
+            while ((n=read(CONN_FD, recvline, MAXLINE)) > 0) {
                 recvline[n]=0;
                 printf("PID %d SEND: ", getpid());
                 if ((fputs(recvline,stdout)) == EOF) {
@@ -65,13 +65,13 @@ int main (int argc, char **argv) {
                 }
                 char* return_msg = parse_command(recvline);
                 printf("SERVER RESPONSE: %s", return_msg);
-                write(connfd, return_msg, strlen(return_msg));
+                write(CONN_FD, return_msg, strlen(return_msg));
             }
 
             printf("Finished connection with child PID: %d\n", getpid());
             exit(EXIT_SUCCESS);
         } else { // Parent proccess
-            close(connfd);
+            close(CONN_FD);
         }
     }
     exit(0);

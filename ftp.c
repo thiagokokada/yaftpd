@@ -3,6 +3,7 @@
 char CURRENT_DIR[256] = "/";
 int INIT_SEED = 0;
 int PASSIVE_PIPE_FD[2];
+int CONN_FD = 0;
 struct sockaddr_in CURRENT_CONN;
 socklen_t CURRENT_CONN_SIZE;
 
@@ -44,6 +45,8 @@ char* parse_command(char* command)
             
             popt_t operation;
             read(PASSIVE_PIPE_FD[0], &operation, sizeof(operation));
+
+            char* return_msg;
             switch(operation) {
                 case LIST: {
                     // http://stackoverflow.com/a/646254
@@ -56,7 +59,7 @@ char* parse_command(char* command)
                     }
                     pclose(fp);
                     close(passivefd);
-                    return response_msg(226, "Directory list has been submitted");
+                    return_msg = response_msg(226, "Directory list has been submitted");
                     break;
                 }
                 case ABOR:
@@ -67,9 +70,10 @@ char* parse_command(char* command)
                 case PUT:
                     break;
                 default:
+                    return_msg = response_msg(500, "Command not found");
                     break;
             }
-
+            write(CONN_FD, return_msg, strlen(return_msg));
             exit(EXIT_SUCCESS);
         }
 
