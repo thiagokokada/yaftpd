@@ -54,16 +54,19 @@ int parse_command(char* command)
                  port / 256, port % 256);
         
         return_msg = response_msg(227, return_msg);
-    } else if (!strncmp(token, "LIST", 4)) {
+    } else if(!strncmp(token, "LIST", 4)) {
         set_passive_mode_operation(LIST);
         return_msg = response_msg(150, "BINARY data connection established");
-    } else if (!strncmp(token, "SYST", 4)) {
+    } else if(!strncmp(token, "SYST", 4)) {
         return_msg = response_msg(215, "UNIX Type: L8");
+    } else if(!strncmp(token, "PORT", 4)) {
+        return_msg = response_msg(502, "This server doesn't support active mode");
+    } else if(!strncmp(token, "LPRT", 4) || !strncmp(token, "LPSV", 4)) {
+        return_msg = response_msg(502, "This server doesn't support long mode");
     } else if(!strncmp(token, "QUIT", 4)) {
         return_msg = response_msg(221, "Bye bye T-T...");
         return 1;
-    }
-    else {
+    } else {
         return_msg = response_msg(500, "Command not found");
     }
 
