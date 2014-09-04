@@ -11,7 +11,7 @@ yaftpd: main.o ftp.o
 main.o: main.c
 	$(CC) $(CFLAGS) main.c
 
-ftp.o: ftp.c
+ftp.o: ftp.c ftp.h
 	$(CC) $(CFLAGS) ftp.c
 
 clean:

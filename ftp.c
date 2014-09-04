@@ -60,16 +60,17 @@ int parse_command(char* command)
     } else if(!strncmp(token, "RETR", 4)) {
         if(access(command, R_OK) != -1) {
             set_passive_mode_operation(RETR, command);
+            return_msg = response_msg(150, "BINARY data connection established");
         } else {
             return_msg = response_msg(553, "No such file or directory");
         }
     } else if(!strncmp(token, "SYST", 4)) {
         return_msg = response_msg(215, "UNIX Type: L8");
     } else if(!strncmp(token, "TYPE", 4)) {
-        if(!strncmp(command, "I", 4)) {
+        if(!strncmp(command, "I", 1)) {
             return_msg = response_msg(200, "Transfer type changed to BINARY");
-        } else {
-            return_msg = response_msg(502, "This server supports only BINARY transfers");
+        } else if(!strncmp(command, "A", 1)) {
+            return_msg = response_msg(200, "Transfer type changed to ASCII");
         }
     } 
     else if(!strncmp(token, "PORT", 4)) {
