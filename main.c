@@ -59,7 +59,7 @@ int main (int argc, char **argv) {
                 }
                 int result = parse_command(recvline);
                 if(result == 1) {
-                    break;
+                    exit(EXIT_SUCCESS);
                 } else if (result == -1) {
                     perror("parse_command");
                     exit(EXIT_FAILURE);
@@ -69,6 +69,7 @@ int main (int argc, char **argv) {
             }
 
             printf("Finished connection with child PID: %d\n", getpid());
+            
         } else { // Parent proccess
             close(CONN_FD);
         }

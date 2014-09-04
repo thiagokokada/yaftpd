@@ -197,6 +197,7 @@ int start_passive_mode(uint32_t ip, uint16_t port) {
 
     close(connfd);
     write(CONN_FD, return_msg, strlen(return_msg));
+    printf("Finished passive mode connection with PID: %d\n", getpid());
     return 1;
 }
 
