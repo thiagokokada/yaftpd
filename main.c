@@ -63,9 +63,15 @@ int main (int argc, char **argv) {
                     perror("fputs");
                     exit(EXIT_FAILURE);
                 }
-                char* return_msg = parse_command(recvline);
-                printf("SERVER RESPONSE: %s", return_msg);
-                write(CONN_FD, return_msg, strlen(return_msg));
+                int result = parse_command(recvline);
+                if(result == 1) {
+                    break;
+                } else if (result == -1) {
+                    perror("parse_command");
+                    exit(EXIT_FAILURE);
+                } else {
+                    continue;
+                }
             }
 
             printf("Finished connection with child PID: %d\n", getpid());

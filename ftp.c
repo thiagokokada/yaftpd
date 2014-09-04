@@ -7,7 +7,7 @@ int CONN_FD = 0;
 struct sockaddr_in CURRENT_CONN;
 socklen_t CURRENT_CONN_SIZE;
 
-char* parse_command(char* command)
+int parse_command(char* command)
 {
     // Remove "\n" from command
     command = strtok(command, "\n");
@@ -16,53 +16,52 @@ char* parse_command(char* command)
     // Print result
     //printf("Token: %s\nArgument: %s\n", token, command);
 
+    char* return_msg;
     if(!strncmp(token, "USER", 4)) {
-        return response_msg(331, "Whatever user ;)");
+        return_msg = response_msg(331, "Whatever user ;)");
     } else if(!strncmp(token, "PASS", 4)) {
-        return response_msg(231, "Whatever pass ;)");
+        return_msg = response_msg(231, "Whatever pass ;)");
     } else if(!strncmp(token, "PWD", 3) || !strncmp(token, "XPWD", 4)) {
-        char* msg;
-        asprintf(&msg, "\"%s\" is the current working directory", CURRENT_DIR);
-        return response_msg(257, msg);
+        char* return_msg;
+        asprintf(&return_msg, "\"%s\" is the current working directory", CURRENT_DIR);
+        return_msg = response_msg(257, return_msg);
     } else if(!strncmp(token, "CWD", 3)) {
         strncpy(CURRENT_DIR, command, 256);
-        return response_msg(250, "OK");
+        return_msg = response_msg(250, "OK");
     } else if(!strncmp(token, "PASV", 4)){
         int childpid, listenfd, connfd;
         int port = random_number(1024, 65535);
         char* current_ip = inet_ntoa(CURRENT_CONN.sin_addr);
-        char* msg;
 
         // The child will start a new process, to handle data connection
         // from passive mode
         pipe(PASSIVE_PIPE_FD);
         if ((childpid = fork()) == 0) {
-            if(start_passive_mode(INADDR_ANY, port) == -1) {
-                perror("start_passive_mode");
-                exit(EXIT_FAILURE);
-            } else {
-                exit(EXIT_SUCCESS);
-            }
+            return start_passive_mode(INADDR_ANY, port);
         }
 
-        asprintf(&msg, "Entering Passive Mode (%s,%s,%s,%s,%d,%d)",
+        asprintf(&return_msg, "Entering Passive Mode (%s,%s,%s,%s,%d,%d)",
                  strsep(&current_ip, "."), strsep(&current_ip, "."),
                  strsep(&current_ip, "."), strsep(&current_ip, "."),
                  port / 256, port % 256);
         
-        return response_msg(227, msg);
+        return_msg = response_msg(227, return_msg);
     } else if (!strncmp(token, "LIST", 4)) {
         set_passive_mode_operation(LIST);
-        return response_msg(150, "BINARY data connection established");
+        return_msg = response_msg(150, "BINARY data connection established");
     } else if (!strncmp(token, "SYST", 4)) {
-        return response_msg(215, "UNIX Type: L8");
+        return_msg = response_msg(215, "UNIX Type: L8");
     } else if(!strncmp(token, "QUIT", 4)) {
-        return response_msg(221, "Bye bye T-T...");
+        return_msg = response_msg(221, "Bye bye T-T...");
     }
     else {
-        return response_msg(500, "Command not found");
+        return_msg = response_msg(500, "Command not found");
     }
-    return NULL;
+
+    printf("SERVER RESPONSE: %s", return_msg);
+    write(CONN_FD, return_msg, strlen(return_msg));
+    
+    return 0;
 }
 
 char* response_msg(int return_code, char* text_msg)
@@ -196,7 +195,7 @@ int start_passive_mode(uint32_t ip, uint16_t port) {
 
     close(connfd);
     write(CONN_FD, return_msg, strlen(return_msg));
-    return 0;
+    return 1;
 }
 
 
