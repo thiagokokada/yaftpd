@@ -35,46 +35,11 @@ char* parse_command(char* command)
 
         pipe(PASSIVE_PIPE_FD);
         if ((childpid = fork()) == 0) {
-            
-            close(PASSIVE_PIPE_FD[1]);
-            int passivefd;
-            if((passivefd = create_passive_conn(INADDR_ANY, port)) == -1) {
-                perror("create_passive_conn");
+            if(handle_passive_conn(INADDR_ANY, port, PASSIVE_PIPE_FD) == -1) {
                 exit(EXIT_FAILURE);
+            } else {
+                exit(EXIT_SUCCESS);
             }
-            
-            popt_t operation;
-            read(PASSIVE_PIPE_FD[0], &operation, sizeof(operation));
-
-            char* return_msg;
-            switch(operation) {
-                case LIST: {
-                    // http://stackoverflow.com/a/646254
-                    FILE *fp;
-                    char path[1035];
-
-                    fp = popen("ls -l | sed 's/$/\\r/'", "r");
-                    while(fgets(path, sizeof(path) - 1, fp) != NULL) {
-                        write(passivefd, path, (strlen(path)+1));
-                    }
-                    pclose(fp);
-                    close(passivefd);
-                    return_msg = response_msg(226, "Directory list has been submitted");
-                    break;
-                }
-                case ABOR:
-                    close(passivefd);
-                    break;
-                case GET:
-                    break;
-                case PUT:
-                    break;
-                default:
-                    return_msg = response_msg(500, "Command not found");
-                    break;
-            }
-            write(CONN_FD, return_msg, strlen(return_msg));
-            exit(EXIT_SUCCESS);
         }
 
         asprintf(&msg, "Entering Passive Mode (%s,%s,%s,%s,%d,%d)",
@@ -189,7 +154,7 @@ int random_number(int min, int max) {
     return retval;
 }
 
-int create_passive_conn(uint32_t ip, uint16_t port) {
+int handle_passive_conn(uint32_t ip, uint16_t port, int* pipe_pid) {
     int listenfd, connfd;
 
     if ((listenfd = create_listener(ip, port, 1)) == -1) {
@@ -198,8 +163,46 @@ int create_passive_conn(uint32_t ip, uint16_t port) {
     if ((connfd = accept(listenfd, (struct sockaddr *) NULL, NULL)) == -1 ) {
         return -1;
     }
+
     close(listenfd);
     printf("Successful connect in passive mode with PID: %d\n", getpid());
+    close(pipe_pid[1]);
 
-    return connfd;
+    popt_t operation;
+    read(pipe_pid[0], &operation, sizeof(operation));
+
+    char* return_msg;
+    switch(operation) {
+        case LIST: {
+                    // http://stackoverflow.com/a/646254
+            FILE *fp;
+            char path[1035];
+
+            fp = popen("ls -l | sed 's/$/\\r/'", "r");
+            while(fgets(path, sizeof(path) - 1, fp) != NULL) {
+                write(connfd, path, (strlen(path)+1));
+            }
+            pclose(fp);
+            close(connfd);
+            return_msg = response_msg(226, "Directory list has been submitted");
+            break;
+        }
+        case ABOR: {
+            close(connfd);
+            break;
+        }
+        case GET: {
+            break;
+        }
+        case PUT: {
+            break;
+        }
+        default: {
+            return_msg = response_msg(500, "Command not found");
+            break;
+        }
+    }
+
+    write(CONN_FD, return_msg, strlen(return_msg));
+    return 0;
 }
