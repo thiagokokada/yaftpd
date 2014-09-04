@@ -70,7 +70,13 @@ int parse_command(char* command)
         } else {
             return_msg = response_msg(553, "No such file or directory");
         }
-
+    } else if(!strncmp(token, "STOR", 4)) {
+        if(access(command, F_OK|W_OK) == -1) {
+            set_passive_mode_operation(STOR, command);
+            return_msg = response_msg(150, "BINARY data connection established");
+        } else {
+            return_msg = response_msg(553, "Remote file is write protected");
+        }
     /* The commands bellow are the minimum required implementation by FTP
     (excluding the commands implemented above), to make FTP workable without
     needless error messages. We don't really implement them, just return the
@@ -241,6 +247,22 @@ int start_passive_mode(uint32_t ip, uint16_t port) {
             break;
         }
         case STOR: {
+            FILE *fp;
+            char recvline[MAXDATASIZE];
+
+            if((fp = fopen(operation.arg, "wb"))) {
+                int bytes_read = 0;
+                while((bytes_read = read(connfd, recvline, MAXDATASIZE)) > 0) {
+                    fwrite(recvline, 1, bytes_read, fp);
+                }
+                fclose(fp);
+                return_msg = response_msg(226, "File transmission successful");
+            } else {
+                return_msg = response_msg(553, "Error while trying to open file");
+            }
+            close(connfd);
+            write(CONN_FD, return_msg, strlen(return_msg));
+            return 1;
             break;
         }
         default: {
