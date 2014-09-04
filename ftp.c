@@ -13,7 +13,7 @@ int parse_command(char* command)
     // Print result
     //printf("Token: %s\nArgument: %s\n", token, command);
 
-    char* return_msg;
+    char* return_msg = NULL;
     if(!strncmp(token, "USER", 4)) {
         return_msg = response_msg(331, "Whatever user ;)");
     } else if(!strncmp(token, "PASS", 4)) {
@@ -33,7 +33,7 @@ int parse_command(char* command)
             return_msg = response_msg(250, "OK");
         }
     } else if(!strncmp(token, "PASV", 4)){
-        int childpid, listenfd, connfd;
+        int childpid;
         int port = random_number(1024, 65535);
         char* current_ip = get_socket_ip(CONN_FD);
         
@@ -76,7 +76,7 @@ int parse_command(char* command)
 char* response_msg(int return_code, char* text_msg)
 {
     int size;
-    char* msg;
+    char* msg = NULL;
 
     /* Return codes <400 are positive replies, while return codes >=400 are
      * negative replies.
@@ -175,7 +175,7 @@ int start_passive_mode(uint32_t ip, uint16_t port) {
     popt_t operation;
     read(PASSIVE_PIPE_FD[0], &operation, sizeof(operation));
 
-    char* return_msg;
+    char* return_msg = NULL;
     switch(operation) {
         case LIST: {
             //https://www.gnu.org/software/libc/manual/html_node/Simple-Directory-Lister.html
