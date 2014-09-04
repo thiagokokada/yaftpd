@@ -64,19 +64,18 @@ int parse_command(char* command)
         } else {
             return_msg = response_msg(553, "No such file or directory");
         }
+
+    /* The commands bellow are the minimum required implementation by FTP
+    (excluding the commands implemented above), to make FTP workable without
+    needless error messages. We don't really implement them, just return the
+    default value to make them workable. */
     } else if(!strncmp(token, "SYST", 4)) {
         return_msg = response_msg(215, "UNIX Type: L8");
-    } else if(!strncmp(token, "TYPE", 4)) {
-        if(!strncmp(command, "I", 1)) {
-            return_msg = response_msg(200, "Transfer type changed to BINARY");
-        } else if(!strncmp(command, "A", 1)) {
-            return_msg = response_msg(200, "Transfer type changed to ASCII");
-        }
-    } 
-    else if(!strncmp(token, "PORT", 4)) {
-        return_msg = response_msg(502, "This server doesn't support active mode");
-    } else if(!strncmp(token, "LPRT", 4) || !strncmp(token, "LPSV", 4)) {
-        return_msg = response_msg(502, "This server doesn't support long mode");
+    } else if(!strncmp(token, "PORT", 4)) {
+        return_msg = response_msg(500, "This server doesn't support active mode");
+    } else if(!strncmp(token, "NOOP", 4) || !strncmp(token, "MODE", 4) ||
+        !strncmp(token, "TYPE", 4) || !strncmp(token, "STRU", 4)) {
+        return_msg = response_msg(200, "OK");
     } else if(!strncmp(token, "QUIT", 4)) {
         return_msg = response_msg(221, "Bye bye T-T...");
         return 1;
