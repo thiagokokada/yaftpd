@@ -1,14 +1,13 @@
 #include "ftp.h"
 
-char CURRENT_DIR[256] = "/";
 int INIT_SEED = 0;
 int PASSIVE_PIPE_FD[2] = {0, 0};
 int CONN_FD = 0;
 
 int parse_command(char* command)
 {
-    // Remove "\n" from command
-    command = strtok(command, "\n");
+    // Remove "\r\n" from command
+    command = strtok(command, "\r\n");
     // Split string on " "
     char* token = strsep(&command, " ");
     // Print result
@@ -20,12 +19,19 @@ int parse_command(char* command)
     } else if(!strncmp(token, "PASS", 4)) {
         return_msg = response_msg(231, "Whatever pass ;)");
     } else if(!strncmp(token, "PWD", 3) || !strncmp(token, "XPWD", 4)) {
-        char* return_msg;
-        asprintf(&return_msg, "\"%s\" is the current working directory", CURRENT_DIR);
-        return_msg = response_msg(257, return_msg);
+        char cwd[1024];
+        if(getcwd(cwd, sizeof(cwd)) != NULL) {
+            asprintf(&return_msg, "\"%s\" is the current working directory", cwd);
+            return_msg = response_msg(257, return_msg);
+        } else {
+            return_msg = response_msg(451, "Could not get current working directory");
+        }
     } else if(!strncmp(token, "CWD", 3)) {
-        strncpy(CURRENT_DIR, command, 256);
-        return_msg = response_msg(250, "OK");
+        if(chdir(command) == -1) {
+            return_msg = response_msg(451, strerror(errno));
+        } else {
+            return_msg = response_msg(250, "OK");
+        }
     } else if(!strncmp(token, "PASV", 4)){
         int childpid, listenfd, connfd;
         int port = random_number(1024, 65535);

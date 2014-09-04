@@ -29,7 +29,6 @@ typedef enum {
     PUT
 } popt_t;
 
-extern char CURRENT_DIR[256];
 extern int INIT_SEED;
 extern int PASSIVE_PIPE_FD[2];
 extern int CONN_FD;
