@@ -17,8 +17,10 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>        
 
-#define VERSION_INFO "YAFTPd - Yet Another FTP daemon v0.1"
 #define LISTENQ 1
+#define MAXDATASIZE 100
+#define MAXLINE 4096
+#define VERSION_INFO "YAFTPd - Yet Another FTP daemon v0.1"
 
 typedef enum {
     LIST,
