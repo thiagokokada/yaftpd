@@ -55,6 +55,7 @@ int parse_command(char* command)
         return_msg = response_msg(215, "UNIX Type: L8");
     } else if(!strncmp(token, "QUIT", 4)) {
         return_msg = response_msg(221, "Bye bye T-T...");
+        return 1;
     }
     else {
         return_msg = response_msg(500, "Command not found");
