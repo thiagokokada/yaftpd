@@ -39,7 +39,7 @@ int create_listener(uint32_t ip,uint16_t port,int reuse_addr);
 char *parse_command(char *command);
 char *version_info();
 char *response_msg(int return_code,char *text_msg);
-int handle_passive_conn(uint32_t ip, uint16_t port, int* pipe_pid);
+int start_passive_mode(uint32_t ip, uint16_t port);
 void set_passive_mode_operation(popt_t type);
 
 #endif

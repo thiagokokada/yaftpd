@@ -33,9 +33,12 @@ char* parse_command(char* command)
         char* current_ip = inet_ntoa(CURRENT_CONN.sin_addr);
         char* msg;
 
+        // The child will start a new process, to handle data connection
+        // from passive mode
         pipe(PASSIVE_PIPE_FD);
         if ((childpid = fork()) == 0) {
-            if(handle_passive_conn(INADDR_ANY, port, PASSIVE_PIPE_FD) == -1) {
+            if(start_passive_mode(INADDR_ANY, port) == -1) {
+                perror("start_passive_mode");
                 exit(EXIT_FAILURE);
             } else {
                 exit(EXIT_SUCCESS);
@@ -147,7 +150,7 @@ int random_number(int min, int max) {
     return retval;
 }
 
-int handle_passive_conn(uint32_t ip, uint16_t port, int* pipe_pid) {
+int start_passive_mode(uint32_t ip, uint16_t port) {
     int listenfd, connfd;
 
     if ((listenfd = create_listener(ip, port, 1)) == -1) {
@@ -159,10 +162,10 @@ int handle_passive_conn(uint32_t ip, uint16_t port, int* pipe_pid) {
 
     close(listenfd);
     printf("Successful connect in passive mode with PID: %d\n", getpid());
-    close(pipe_pid[1]);
+    close(PASSIVE_PIPE_FD[1]);
 
     popt_t operation;
-    read(pipe_pid[0], &operation, sizeof(operation));
+    read(PASSIVE_PIPE_FD[0], &operation, sizeof(operation));
 
     char* return_msg;
     switch(operation) {
