@@ -17,7 +17,7 @@ int parse_command(char* command)
     if(!strncmp(token, "USER", 4)) {
         return_msg = response_msg(331, "Whatever user ;)");
     } else if(!strncmp(token, "PASS", 4)) {
-        return_msg = response_msg(231, "Whatever pass ;)");
+        return_msg = response_msg(230, "Whatever pass ;)");
     } else if(!strncmp(token, "PWD", 3) || !strncmp(token, "XPWD", 4)) {
         char cwd[1024];
         if(getcwd(cwd, sizeof(cwd)) != NULL) {
