@@ -10,6 +10,12 @@ int parse_command(char* command)
     command = strtok(command, "\r\n");
     // Split string on " "
     char* token = strsep(&command, " ");
+    // RFC says that both upper and lower chars are to be treated equally, so...
+    int i = 0;
+    while(token[i]) {
+        token[i] = toupper(token[i]);
+        i++;
+    }
     // Print result
     //printf("Token: %s\nArgument: %s\n", token, command);
 
@@ -18,7 +24,7 @@ int parse_command(char* command)
         return_msg = response_msg(331, "Whatever user ;)");
     } else if(!strncmp(token, "PASS", 4)) {
         return_msg = response_msg(230, "Whatever pass ;)");
-    } else if(!strncmp(token, "PWD", 3) || !strncmp(token, "XPWD", 4)) {
+    } else if(!strncmp(token, "PWD", 4) || !strncmp(token, "XPWD", 4)) {
         char cwd[1024];
         if(getcwd(cwd, sizeof(cwd)) != NULL) {
             asprintf(&return_msg, "\"%s\" is the current working directory", cwd);
@@ -26,7 +32,7 @@ int parse_command(char* command)
         } else {
             return_msg = response_msg(451, "Could not get current working directory");
         }
-    } else if(!strncmp(token, "CWD", 3)) {
+    } else if(!strncmp(token, "CWD", 4)) {
         if(chdir(command) == -1) {
             return_msg = response_msg(451, strerror(errno));
         } else {
