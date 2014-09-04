@@ -75,10 +75,9 @@ int main (int argc, char **argv) {
             }
 
             printf("Finished connection with child PID: %d\n", getpid());
-            exit(EXIT_SUCCESS);
         } else { // Parent proccess
             close(CONN_FD);
         }
     }
-    exit(0);
+    exit(EXIT_SUCCESS);
 }
