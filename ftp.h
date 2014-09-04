@@ -19,20 +19,19 @@
 #include <dirent.h>
 
 #define LISTENQ 1
-#define MAXDATASIZE 100
+#define MAXDATASIZE 16384
 #define MAXLINE 4096
 #define VERSION_INFO "YAFTPd - Yet Another FTP daemon v0.1"
 
 enum opt {
     LIST,
-    ABOR,
-    GET,
-    PUT
+    RETR,
+    STOR
 };
 
 typedef struct {
     enum opt type;
-    char* arg;
+    char arg[256];
 } popt_t;
 
 extern int INIT_SEED;

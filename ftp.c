@@ -57,9 +57,22 @@ int parse_command(char* command)
     } else if(!strncmp(token, "LIST", 4)) {
         set_passive_mode_operation(LIST, NULL);
         return_msg = response_msg(150, "BINARY data connection established");
+    } else if(!strncmp(token, "RETR", 4)) {
+        if(access(command, R_OK) != -1) {
+            set_passive_mode_operation(RETR, command);
+        } else {
+            return_msg = response_msg(553, "No such file or directory");
+        }
     } else if(!strncmp(token, "SYST", 4)) {
         return_msg = response_msg(215, "UNIX Type: L8");
-    } else if(!strncmp(token, "PORT", 4)) {
+    } else if(!strncmp(token, "TYPE", 4)) {
+        if(!strncmp(command, "I", 4)) {
+            return_msg = response_msg(200, "Transfer type changed to BINARY");
+        } else {
+            return_msg = response_msg(502, "This server supports only BINARY transfers");
+        }
+    } 
+    else if(!strncmp(token, "PORT", 4)) {
         return_msg = response_msg(502, "This server doesn't support active mode");
     } else if(!strncmp(token, "LPRT", 4) || !strncmp(token, "LPSV", 4)) {
         return_msg = response_msg(502, "This server doesn't support long mode");
@@ -197,12 +210,30 @@ int start_passive_mode(uint32_t ip, uint16_t port) {
             } else {
                 return_msg = response_msg(451, strerror(errno));
             }
+            close(connfd);
+            write(CONN_FD, return_msg, strlen(return_msg));
+            return 1;
             break;
         }
-        case GET: {
+        case RETR: {
+            FILE *fp;
+            char recvline[MAXDATASIZE];
+
+            if((fp = fopen(operation.arg, "rb"))) {
+                while ((fread(recvline, sizeof(recvline[0]), sizeof(recvline)/sizeof(recvline[0]), fp)) > 0) {
+                    write(connfd, recvline, sizeof(recvline));
+                }
+                fclose(fp);
+                return_msg = response_msg(226, "File transmission successful");
+            } else {
+                return_msg = response_msg(553, "Error while trying to open file");
+            }
+            close(connfd);
+            write(CONN_FD, return_msg, strlen(return_msg));
+            return 0;
             break;
         }
-        case PUT: {
+        case STOR: {
             break;
         }
         default: {
@@ -210,11 +241,7 @@ int start_passive_mode(uint32_t ip, uint16_t port) {
             break;
         }
     }
-
-    close(connfd);
-    write(CONN_FD, return_msg, strlen(return_msg));
-    printf("Finished passive mode connection with PID: %d\n", getpid());
-    return 1;
+    return 0;
 }
 
 char* get_socket_ip(int fd) {
@@ -231,7 +258,9 @@ char* get_socket_ip(int fd) {
 void set_passive_mode_operation(int type, char* arg) {
     popt_t operation;
     operation.type = type;
-    operation.arg = arg;
+    if(arg) {
+        strncpy(operation.arg, arg, 256);
+    }
     close(PASSIVE_PIPE_FD[0]);
-    write(PASSIVE_PIPE_FD[1], &type, sizeof(type));
+    write(PASSIVE_PIPE_FD[1], &operation, sizeof(operation));
 }
