@@ -2,10 +2,8 @@
 
 char CURRENT_DIR[256] = "/";
 int INIT_SEED = 0;
-int PASSIVE_PIPE_FD[2];
+int PASSIVE_PIPE_FD[2] = {0, 0};
 int CONN_FD = 0;
-struct sockaddr_in CURRENT_CONN;
-socklen_t CURRENT_CONN_SIZE;
 
 int parse_command(char* command)
 {
@@ -31,7 +29,11 @@ int parse_command(char* command)
     } else if(!strncmp(token, "PASV", 4)){
         int childpid, listenfd, connfd;
         int port = random_number(1024, 65535);
-        char* current_ip = inet_ntoa(CURRENT_CONN.sin_addr);
+        char* current_ip = get_socket_ip(CONN_FD);
+        
+        if(current_ip == NULL) {
+            return -1;
+        }
 
         // The child will start a new process, to handle data connection
         // from passive mode
@@ -198,6 +200,16 @@ int start_passive_mode(uint32_t ip, uint16_t port) {
     return 1;
 }
 
+char* get_socket_ip(int fd) {
+    struct sockaddr_in conn_addr;
+    socklen_t conn_addr_len = sizeof(conn_addr);
+    
+    if ((getsockname(fd, &conn_addr, &conn_addr_len)) == -1) {
+        return NULL;
+    }
+
+    return inet_ntoa(conn_addr.sin_addr);
+}
 
 void set_passive_mode_operation(popt_t type) {
     close(PASSIVE_PIPE_FD[0]);

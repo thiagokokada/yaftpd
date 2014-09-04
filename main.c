@@ -42,14 +42,8 @@ int main (int argc, char **argv) {
             exit(EXIT_FAILURE);
         }
 
-        socklen_t CURRENT_CONN_SIZE = sizeof(CURRENT_CONN);
-        if (getsockname(CONN_FD, (struct sockaddr_in *) &CURRENT_CONN, &CURRENT_CONN_SIZE) == -1) {
-            perror("getsockname");
-            exit(EXIT_FAILURE);
-        }
-
         if ((childpid = fork()) == 0) { // Child proccess
-            printf("Succesful connection at %s. New child PID: %d\n", inet_ntoa(CURRENT_CONN.sin_addr), getpid());
+            printf("Succesful connection at %s. New child PID: %d\n", get_socket_ip(CONN_FD), getpid());
             close(listenfd);
 
             /* When the user connects show info message about server version */ 
