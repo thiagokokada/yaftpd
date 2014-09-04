@@ -55,7 +55,7 @@ int parse_command(char* command)
         
         return_msg = response_msg(227, return_msg);
     } else if(!strncmp(token, "LIST", 4)) {
-        set_passive_mode_operation(LIST);
+        set_passive_mode_operation(LIST, NULL);
         return_msg = response_msg(150, "BINARY data connection established");
     } else if(!strncmp(token, "SYST", 4)) {
         return_msg = response_msg(215, "UNIX Type: L8");
@@ -179,7 +179,7 @@ int start_passive_mode(uint32_t ip, uint16_t port) {
     read(PASSIVE_PIPE_FD[0], &operation, sizeof(operation));
 
     char* return_msg = NULL;
-    switch(operation) {
+    switch(operation.type) {
         case LIST: {
             //https://www.gnu.org/software/libc/manual/html_node/Simple-Directory-Lister.html
             DIR *dp;
@@ -228,7 +228,10 @@ char* get_socket_ip(int fd) {
     return inet_ntoa(conn_addr.sin_addr);
 }
 
-void set_passive_mode_operation(popt_t type) {
+void set_passive_mode_operation(int type, char* arg) {
+    popt_t operation;
+    operation.type = type;
+    operation.arg = arg;
     close(PASSIVE_PIPE_FD[0]);
     write(PASSIVE_PIPE_FD[1], &type, sizeof(type));
 }

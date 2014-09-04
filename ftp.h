@@ -23,11 +23,16 @@
 #define MAXLINE 4096
 #define VERSION_INFO "YAFTPd - Yet Another FTP daemon v0.1"
 
-typedef enum {
+enum opt {
     LIST,
     ABOR,
     GET,
     PUT
+};
+
+typedef struct {
+    enum opt type;
+    char* arg;
 } popt_t;
 
 extern int INIT_SEED;
@@ -36,11 +41,11 @@ extern int CONN_FD;
 
 int random_number(int min,int max);
 int create_listener(uint32_t ip,uint16_t port,int reuse_addr);
-int parse_command(char *command);
-char *version_info();
-char *response_msg(int return_code,char *text_msg);
+int parse_command(char* command);
+char* version_info();
+char* response_msg(int return_code,char* text_msg);
 char* get_socket_ip(int fd);
 int start_passive_mode(uint32_t ip, uint16_t port);
-void set_passive_mode_operation(popt_t type);
+void set_passive_mode_operation(int type, char* arg);
 
 #endif
