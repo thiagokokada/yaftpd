@@ -48,15 +48,8 @@ char* parse_command(char* command)
                  port / 256, port % 256);
         
         return response_msg(227, msg);
-    } else if (!strncmp(token, "ABOR", 4)) {
-        close(PASSIVE_PIPE_FD[1]);
-        popt_t operation = ABOR;
-        write(PASSIVE_PIPE_FD[0], &operation, sizeof(operation));
-        return response_msg(226, "Aborted connection");
     } else if (!strncmp(token, "LIST", 4)) {
-        close(PASSIVE_PIPE_FD[0]);
-        popt_t operation = LIST;
-        write(PASSIVE_PIPE_FD[1], &operation, sizeof(operation));
+        set_passive_mode_operation(LIST);
         return response_msg(150, "BINARY data connection established");
     } else if (!strncmp(token, "SYST", 4)) {
         return response_msg(215, "UNIX Type: L8");
@@ -183,12 +176,7 @@ int handle_passive_conn(uint32_t ip, uint16_t port, int* pipe_pid) {
                 write(connfd, path, (strlen(path)+1));
             }
             pclose(fp);
-            close(connfd);
             return_msg = response_msg(226, "Directory list has been submitted");
-            break;
-        }
-        case ABOR: {
-            close(connfd);
             break;
         }
         case GET: {
@@ -203,6 +191,13 @@ int handle_passive_conn(uint32_t ip, uint16_t port, int* pipe_pid) {
         }
     }
 
+    close(connfd);
     write(CONN_FD, return_msg, strlen(return_msg));
     return 0;
+}
+
+
+void set_passive_mode_operation(popt_t type) {
+    close(PASSIVE_PIPE_FD[0]);
+    write(PASSIVE_PIPE_FD[1], &type, sizeof(type));
 }
