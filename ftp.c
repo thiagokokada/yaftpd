@@ -237,7 +237,7 @@ int start_passive_mode(uint32_t ip, uint16_t port) {
             }
             close(connfd);
             write(CONN_FD, return_msg, strlen(return_msg));
-            return 0;
+            return 1;
             break;
         }
         case STOR: {
