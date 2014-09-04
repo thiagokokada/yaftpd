@@ -226,8 +226,9 @@ int start_passive_mode(uint32_t ip, uint16_t port) {
             char recvline[MAXDATASIZE];
 
             if((fp = fopen(operation.arg, "rb"))) {
-                while ((fread(recvline, sizeof(recvline[0]), sizeof(recvline)/sizeof(recvline[0]), fp)) > 0) {
-                    write(connfd, recvline, sizeof(recvline));
+                int bytes_read = 0;
+                while((bytes_read = fread(recvline, 1, MAXDATASIZE, fp)) > 0) {
+                    write(connfd, recvline, bytes_read);
                 }
                 fclose(fp);
                 return_msg = response_msg(226, "File transmission successful");
