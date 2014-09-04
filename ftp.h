@@ -15,7 +15,8 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
-#include <arpa/inet.h>        
+#include <arpa/inet.h>
+#include <dirent.h>
 
 #define LISTENQ 1
 #define MAXDATASIZE 100

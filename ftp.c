@@ -178,16 +178,22 @@ int start_passive_mode(uint32_t ip, uint16_t port) {
     char* return_msg;
     switch(operation) {
         case LIST: {
-                    // http://stackoverflow.com/a/646254
-            FILE *fp;
-            char path[1035];
+            //https://www.gnu.org/software/libc/manual/html_node/Simple-Directory-Lister.html
+            DIR *dp;
+            struct dirent *ep;
 
-            fp = popen("ls -l | sed 's/$/\\r/'", "r");
-            while(fgets(path, sizeof(path) - 1, fp) != NULL) {
-                write(connfd, path, (strlen(path)+1));
+            dp = opendir("./");
+            if(dp != NULL) {
+                char* dir_name;
+                while((ep = readdir(dp))) {
+                    asprintf(&dir_name, "%s\r\n", ep->d_name);
+                    write(connfd, dir_name, (strlen(dir_name)+1));
+                }
+                closedir(dp);
+                return_msg = response_msg(226, "Directory list has been submitted");
+            } else {
+                return_msg = response_msg(451, strerror(errno));
             }
-            pclose(fp);
-            return_msg = response_msg(226, "Directory list has been submitted");
             break;
         }
         case GET: {
