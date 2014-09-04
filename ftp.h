@@ -20,9 +20,16 @@
 #define VERSION_INFO "YAFTPd - Yet Another FTP daemon v0.1"
 #define LISTENQ 1
 
-extern int INIT_SEED;
-extern int PASSIVE_CONN_FD;
+typedef enum {
+    LIST,
+    ABOR,
+    GET,
+    PUT
+} popt_t;
+
 extern char CURRENT_DIR[256];
+extern int INIT_SEED;
+extern int PASSIVE_PIPE_FD[2];
 extern struct sockaddr_in CURRENT_CONN;
 extern socklen_t CURRENT_CONN_SIZE;
 

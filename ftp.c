@@ -2,7 +2,7 @@
 
 char CURRENT_DIR[256] = "/";
 int INIT_SEED = 0;
-int PASSIVE_CONN_FD = -1;
+int PASSIVE_PIPE_FD[2];
 struct sockaddr_in CURRENT_CONN;
 socklen_t CURRENT_CONN_SIZE;
 
@@ -32,11 +32,45 @@ char* parse_command(char* command)
         char* current_ip = inet_ntoa(CURRENT_CONN.sin_addr);
         char* msg;
 
+        pipe(PASSIVE_PIPE_FD);
         if ((childpid = fork()) == 0) {
-            if((PASSIVE_CONN_FD = create_passive_conn(INADDR_ANY, port)) == -1) {
+            
+            close(PASSIVE_PIPE_FD[1]);
+            int passivefd;
+            if((passivefd = create_passive_conn(INADDR_ANY, port)) == -1) {
                 perror("create_passive_conn");
                 exit(EXIT_FAILURE);
             }
+            
+            popt_t operation;
+            read(PASSIVE_PIPE_FD[0], &operation, sizeof(operation));
+            switch(operation) {
+                case LIST: {
+                    // http://stackoverflow.com/a/646254
+                    FILE *fp;
+                    char path[1035];
+
+                    fp = popen("ls -l | sed 's/$/\\r/'", "r");
+                    while(fgets(path, sizeof(path) - 1, fp) != NULL) {
+                        write(passivefd, path, (strlen(path)+1));
+                    }
+                    pclose(fp);
+                    close(passivefd);
+                    return response_msg(226, "Directory list has been submitted");
+                    break;
+                }
+                case ABOR:
+                    close(passivefd);
+                    break;
+                case GET:
+                    break;
+                case PUT:
+                    break;
+                default:
+                    break;
+            }
+
+            exit(EXIT_SUCCESS);
         }
 
         asprintf(&msg, "Entering Passive Mode (%s,%s,%s,%s,%d,%d)",
@@ -46,12 +80,15 @@ char* parse_command(char* command)
         
         return response_msg(227, msg);
     } else if (!strncmp(token, "ABOR", 4)) {
-        if (PASSIVE_CONN_FD == -1) {
-            return response_msg(225, "No transfer to abort");
-        } else {
-            close(PASSIVE_CONN_FD);
-            return response_msg(226, "Aborted connection");
-        }
+        close(PASSIVE_PIPE_FD[1]);
+        popt_t operation = ABOR;
+        write(PASSIVE_PIPE_FD[0], &operation, sizeof(operation));
+        return response_msg(226, "Aborted connection");
+    } else if (!strncmp(token, "LIST", 4)) {
+        close(PASSIVE_PIPE_FD[0]);
+        popt_t operation = LIST;
+        write(PASSIVE_PIPE_FD[1], &operation, sizeof(operation));
+        return response_msg(150, "BINARY data connection established");
     } else if (!strncmp(token, "SYST", 4)) {
         return response_msg(215, "UNIX Type: L8");
     } else if(!strncmp(token, "QUIT", 4)) {
