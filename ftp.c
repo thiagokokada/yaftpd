@@ -74,10 +74,14 @@ int parse_command(char* command)
         // (like "127.0.0.1"->"127,0,0,1") and "e,f" is the socket port openned
         // by the server, in the following representation: "e = port / 256" and
         // "f = port % 256".
+        char* a = strsep(&current_ip, ".");
+        char* b = strsep(&current_ip, ".");
+        char* c = strsep(&current_ip, ".");
+        char* d = strsep(&current_ip, ".");
+        int e = port / 256;
+        int f = port % 256;
         asprintf(&return_msg, "Entering Passive Mode (%s,%s,%s,%s,%d,%d)",
-                 strsep(&current_ip, "."), strsep(&current_ip, "."),
-                 strsep(&current_ip, "."), strsep(&current_ip, "."),
-                 port / 256, port % 256);
+                 a, b, c, d, e, f);
         
         return_msg = response_msg(227, return_msg);
 

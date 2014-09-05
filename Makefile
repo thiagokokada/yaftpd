@@ -1,5 +1,6 @@
 # Based from here: http://mrbook.org/tutorials/make/
-CC=clang
+#CC=clang
+CC=gcc
 CFLAGS=-c -Wall
 OUTPUT=yaftpd
 
