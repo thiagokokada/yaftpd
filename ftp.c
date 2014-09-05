@@ -171,6 +171,10 @@ char* response_msg(int return_code, char* text_msg)
     } else {
         size = asprintf(&msg, "%d Error: %s\r\n", return_code, text_msg);
     }
+
+    if(size == -1) {
+        return NULL;
+    }
     
     return msg;
 }
@@ -259,8 +263,10 @@ int random_number(int min, int max) {
 Input:
 ip and port -- See create_listener for details.
 
-Returns -1 in case of error, otherwise 0 to maintain this connection active
-or 1 to close this connection.
+Returns -1 in case of error, 1 otherwise. Why not 0? This is reserved for
+future use (to use if you need to maintain this connection active, but my
+investigation of FTP protocol didn't find a case where the data connection
+was active after use).
 */
 int start_passive_mode(uint32_t ip, uint16_t port) {
     int listenfd, connfd;
@@ -300,7 +306,6 @@ int start_passive_mode(uint32_t ip, uint16_t port) {
             }
             close(connfd);
             write(CONN_FD, return_msg, strlen(return_msg));
-            return 1;
             break;
         }
         case RETR: {
@@ -319,7 +324,6 @@ int start_passive_mode(uint32_t ip, uint16_t port) {
             }
             close(connfd);
             write(CONN_FD, return_msg, strlen(return_msg));
-            return 1;
             break;
         }
         case STOR: {
@@ -338,7 +342,6 @@ int start_passive_mode(uint32_t ip, uint16_t port) {
             }
             close(connfd);
             write(CONN_FD, return_msg, strlen(return_msg));
-            return 1;
             break;
         }
         default: {
@@ -346,7 +349,7 @@ int start_passive_mode(uint32_t ip, uint16_t port) {
             break;
         }
     }
-    return 0;
+    return 1;
 }
 
 /* Returns the socket IP in a user friendly format (like 127.0.0.1).
