@@ -1,7 +1,5 @@
 #include "ftp.h"
 
-#define MAXDATASIZE 100
-#define MAXLINE 4096
 
 int main (int argc, char **argv) {
     int listenfd;
@@ -45,11 +43,16 @@ int main (int argc, char **argv) {
                 }
                 int result = parse_command(recvline);
                 if(result == 1) {
+                    // If parse_command returns 1, we should exit the current
+                    // proccess
                     exit(EXIT_SUCCESS);
                 } else if (result == -1) {
+                    // In case of error too, but we should inform the system.
                     perror("parse_command");
                     exit(EXIT_FAILURE);
                 } else {
+                    // If parse_command returns 0, we should continue the
+                    // process.
                     continue;
                 }
             }

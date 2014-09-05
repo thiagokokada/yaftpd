@@ -1,9 +1,18 @@
 #include "ftp.h"
 
+
 int INIT_SEED = 0;
 int PASSIVE_PIPE_FD[2] = {0, 0};
 int CONN_FD = 0;
 
+/** Parse user commands, process and send result to the user.
+
+Input:
+command -- User command to parse.
+
+Returns -1 in case of error, 0 in case of success and to maintain the current
+connection active and 1 in case of success but to close the current connection.
+*/
 int parse_command(char* command)
 {
     // Remove "\r\n" from command
@@ -16,16 +25,18 @@ int parse_command(char* command)
         token[i] = toupper(token[i]);
         i++;
     }
-    // Print result
-    //printf("Token: %s\nArgument: %s\n", token, command);
 
     char* return_msg = NULL;
+    // We don't really authenticate the user, just return the correct code
+    // with a random message to the user.
     if(!strncmp(token, "USER", 4)) {
         return_msg = response_msg(331, "Whatever user ;)");
     } else if(!strncmp(token, "PASS", 4)) {
         return_msg = response_msg(230, "Whatever pass ;)");
-    } else if(!strncmp(token, "PWD", 4) || !strncmp(token, "XPWD", 4)) {
+    } else if(!strncmp(token, "PWD", 4)) {
         char cwd[1024];
+        // Using getcwd, we get the current working directory, so we can
+        // inform the user.
         if(getcwd(cwd, sizeof(cwd)) != NULL) {
             asprintf(&return_msg, "\"%s\" is the current working directory", cwd);
             return_msg = response_msg(257, return_msg);
@@ -33,6 +44,8 @@ int parse_command(char* command)
             return_msg = response_msg(451, "Could not get current working directory");
         }
     } else if(!strncmp(token, "CWD", 4)) {
+        // In the case it's impossible to change directory, return the error
+        // message to the user
         if(chdir(command) == -1) {
             return_msg = response_msg(451, strerror(errno));
         } else {
@@ -43,44 +56,57 @@ int parse_command(char* command)
         int port = random_number(1024, 65535);
         char* current_ip = get_socket_ip(CONN_FD);
         
+        // If the above function fails this probably there is something wrong.
         if(current_ip == NULL) {
             return -1;
         }
 
-        // The child will start a new process, to handle data connection
-        // from passive mode
+        // We need to create a new process, so we don't lock the current
+        // process for user input. We create a pipe too, so we can send
+        // the actual request from client to the child process.
         pipe(PASSIVE_PIPE_FD);
         if ((childpid = fork()) == 0) {
             return start_passive_mode(INADDR_ANY, port);
         }
 
+        // In passive mode, the address that the client needs to connect is
+        // defined by "(a,b,c,d,e,f)", where "a,b,c,d" is the server IP
+        // (like "127.0.0.1"->"127,0,0,1") and "e,f" is the socket port openned
+        // by the server, in the following representation: "e = port / 256" and
+        // "f = port % 256".
         asprintf(&return_msg, "Entering Passive Mode (%s,%s,%s,%s,%d,%d)",
                  strsep(&current_ip, "."), strsep(&current_ip, "."),
                  strsep(&current_ip, "."), strsep(&current_ip, "."),
                  port / 256, port % 256);
         
         return_msg = response_msg(227, return_msg);
+
+    // LIST, RETR, STOR are operations that happen in the data connection
+    // created in the PASV request.
     } else if(!strncmp(token, "LIST", 4)) {
         set_passive_mode_operation(LIST, NULL);
         return_msg = response_msg(150, "BINARY data connection established");
     } else if(!strncmp(token, "RETR", 4)) {
-        if(access(command, R_OK) != -1) {
+        // We first check if we can actually read the file before trying to
+        // send to the client.
+        if(access(command, F_OK|R_OK) != -1) {
             set_passive_mode_operation(RETR, command);
             return_msg = response_msg(150, "BINARY data connection established");
         } else {
             return_msg = response_msg(553, "No such file or directory");
         }
     } else if(!strncmp(token, "STOR", 4)) {
+        // This operation is basically the inverse of RETR.
         if(access(command, F_OK|W_OK) == -1) {
             set_passive_mode_operation(STOR, command);
             return_msg = response_msg(150, "BINARY data connection established");
         } else {
             return_msg = response_msg(553, "Remote file is write protected");
         }
-    /* The commands bellow are the minimum required implementation by FTP
-    (excluding the commands implemented above), to make FTP workable without
-    needless error messages. We don't really implement them, just return the
-    default value to make them workable. */
+    // The commands bellow are the minimum required implementation by FTP
+    // (excluding the commands implemented above), to make FTP workable without
+    // needless error messages. We don't really implement them, just return the
+    // default value to make them workable.
     } else if(!strncmp(token, "SYST", 4)) {
         return_msg = response_msg(215, "UNIX Type: L8");
     } else if(!strncmp(token, "PORT", 4)) {
@@ -89,6 +115,9 @@ int parse_command(char* command)
         !strncmp(token, "TYPE", 4) || !strncmp(token, "STRU", 4)) {
         return_msg = response_msg(200, "OK");
     } else if(!strncmp(token, "MOO", 4)) {
+        // Why did I implemented this command? Well, because ;)...
+        // Of course this is only accessible using telnet or a specially
+        // craft client.
         char* moo = "\n"
                     " ______________________ \n"
                     "< Because I can ;) ... >\n"
@@ -102,46 +131,70 @@ int parse_command(char* command)
         return_msg = response_msg(666, moo);
     } else if(!strncmp(token, "QUIT", 4)) {
         return_msg = response_msg(221, "Bye bye T-T...");
+        // Return 1 after QUIT, so the parent can close this connection.
         return 1;
     } else {
         return_msg = response_msg(500, "Command not found");
     }
 
+    // For logging purposes.
     printf("SERVER RESPONSE: %s", return_msg);
+    // Actually send message to the client.
     write(CONN_FD, return_msg, strlen(return_msg));
     
+    // Except if overwrite above, the current connection is still alive.
     return 0;
 }
 
+/** Create a FTP friendly formated message, including return code, CRLF and
+error tag when it's appropriate.
+
+Input:
+return_code -- Return code of the message. This is what the client process.
+See https://en.wikipedia.org/wiki/List_of_FTP_server_return_codes for a list of
+them.
+
+text_msg -- User friendly message. This can be anything, since it isn't
+processed by the client, but of course a nice message helps.
+
+Return the formated message in case of success, or NULL in case of error. 
+*/
 char* response_msg(int return_code, char* text_msg)
 {
     int size;
     char* msg = NULL;
 
-    /* Return codes <400 are positive replies, while return codes >=400 are
-     * negative replies.
-     *
-     * See here: https://en.wikipedia.org/wiki/List_of_FTP_server_return_codes
-     */
+    // Return codes <400 are positive replies, while return codes >=400 are
+    // negative replies.
     if(return_code < 400) {
         size = asprintf(&msg, "%d %s\r\n", return_code, text_msg);
     } else {
         size = asprintf(&msg, "%d Error: %s\r\n", return_code, text_msg);
     }
-
-    if(size == -1) {
-        fprintf(stderr, "Malloc error: can't allocate memory\n");
-        exit(EXIT_FAILURE);
-    }
     
     return msg;
 }
 
+/** Returns version info with correct return code when the users connects to
+the server. Actual server information is defined by VERSION_INFO constant.
+*/
 char* version_info()
 {
     return response_msg(220, VERSION_INFO);
 }
 
+/** Create a new listener socket.
+
+Input:
+ip -- IP to listen by. Needs to be correctly formatted. See "man 0 sys_socket.h"
+for details.
+port -- Port to listen by. Same considerations as above.
+reuse_addr -- Set to 1 if it's possible to reuse this socket in a small amount
+of time, otherwise set it to 0.
+
+Returns the new socket file descriptor in case of success, or -1 otherwise. In
+case of error, errno will be set to indicate the type of the error.
+*/
 int create_listener(uint32_t ip, uint16_t port, int reuse_addr) {
     int listenfd;
     struct sockaddr_in servaddr;
@@ -170,13 +223,16 @@ int create_listener(uint32_t ip, uint16_t port, int reuse_addr) {
     return listenfd;
 }
 
-int random_number(int min, int max) {
-    /* Generate a random number in [min, max] range, where min >= 0 and
-    max < RAND_MAX.
+/** Generate a random number in [min, max] range, where min >= 0 and
+max < RAND_MAX.
 
-    Returns a number between 0 and max, or -1 in case of error.
-    */
-    
+Input:
+min -- Minimum possible value.
+max -- Maximum possible value.
+
+Returns a number between 0 and max, or -1 in case of error.
+*/
+int random_number(int min, int max) {    
     // Check if input is valid
     if(min < 0 || max >= RAND_MAX) {
         return -1;
@@ -198,6 +254,14 @@ int random_number(int min, int max) {
     return retval;
 }
 
+/** Starts a new listener socket for data in passive mode.
+
+Input:
+ip and port -- See create_listener for details.
+
+Returns -1 in case of error, otherwise 0 to maintain this connection active
+or 1 to close this connection.
+*/
 int start_passive_mode(uint32_t ip, uint16_t port) {
     int listenfd, connfd;
 
@@ -285,6 +349,11 @@ int start_passive_mode(uint32_t ip, uint16_t port) {
     return 0;
 }
 
+/* Returns the socket IP in a user friendly format (like 127.0.0.1).
+
+Input:
+fd -- socket's file descriptor
+*/
 char* get_socket_ip(int fd) {
     struct sockaddr_in conn_addr;
     socklen_t conn_addr_len = sizeof(conn_addr);
@@ -296,6 +365,12 @@ char* get_socket_ip(int fd) {
     return inet_ntoa(conn_addr.sin_addr);
 }
 
+/* Set passive mode operation
+
+Input:
+type -- Type of operation
+arg -- Argument of the operation
+*/
 void set_passive_mode_operation(int type, char* arg) {
     popt_t operation;
     operation.type = type;
