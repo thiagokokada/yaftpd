@@ -88,6 +88,18 @@ int parse_command(char* command)
     } else if(!strncmp(token, "NOOP", 4) || !strncmp(token, "MODE", 4) ||
         !strncmp(token, "TYPE", 4) || !strncmp(token, "STRU", 4)) {
         return_msg = response_msg(200, "OK");
+    } else if(!strncmp(token, "MOO", 4)) {
+        char* moo = "\n"
+                    " ______________________ \n"
+                    "< Because I can ;) ... >\n"
+                    " ---------------------- \n"
+                    "        \\   ^__^        \n"
+                    "         \\  (oo)\\_______\n"
+                    "            (__)\\       )\\/\\\n"
+                    "                ||----w |\n"
+                    "                ||     ||\n";
+
+        return_msg = response_msg(666, moo);
     } else if(!strncmp(token, "QUIT", 4)) {
         return_msg = response_msg(221, "Bye bye T-T...");
         return 1;
