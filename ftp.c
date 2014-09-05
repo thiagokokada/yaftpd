@@ -135,6 +135,8 @@ int parse_command(char* command)
         return_msg = response_msg(666, moo);
     } else if(!strncmp(token, "QUIT", 4)) {
         return_msg = response_msg(221, "Bye bye T-T...");
+        // Need to write the message before exiting this function.
+        write(CONN_FD, return_msg, strlen(return_msg));
         // Return 1 after QUIT, so the parent can close this connection.
         return 1;
     } else {
